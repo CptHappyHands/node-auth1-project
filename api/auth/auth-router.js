@@ -1,7 +1,31 @@
 // Require `checkUsernameFree`, `checkUsernameExists` and `checkPasswordLength`
 // middleware functions from `auth-middleware.js`. You will need them here!
 
+const router = require("express").Router();
+const User = require("../users/users-model");
+const bcrypt = require("bcryptjs");
+const {
+  checkPasswordLength,
+  checkUsernameExists,
+  checkUsernameFree,
+} = require("./auth-middleware");
 
+router.post(
+  "/register",
+  checkPasswordLength,
+  checkUsernameFree,
+  async (req, res, next) => {
+    try {
+      const { username, password } = req.body;
+      const hash = bcrypt.hashSync(password, 8);
+      const newUser = { username, password: hash };
+      const user = await User.add(newUser);
+      res.status(201).json(user);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 /**
   1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
 
@@ -25,6 +49,24 @@
   }
  */
 
+router.post("/login", checkUsernameExists, async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const [existingUser] = await User.findBy({ username });
+    if (existingUser && bcrypt.compareSync(password, existingUser.password)) {
+      req.session.user = existingUser;
+      res.json({
+        status: 200,
+        message: `Welcome ${existingUser.username}!`,
+      });
+    } else {
+      next({ status: 401, message: "Invalid credentials" });
+    }
+    res.json("login");
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
   2 [POST] /api/auth/login { "username": "sue", "password": "1234" }
@@ -42,7 +84,21 @@
   }
  */
 
-
+router.get("/logout", (req, res) => {
+  if (req.session.user) {
+    req.session.destroy((err) => {
+      if (err) {
+        res.json({
+          message: "no session",
+        });
+      } else {
+        res.json({
+          message: "logged out",
+        });
+      }
+    });
+  }
+});
 /**
   3 [GET] /api/auth/logout
 
@@ -59,5 +115,6 @@
   }
  */
 
- 
+module.exports = router;
+
 // Don't forget to add the router to the `exports` object so it can be required in other modules

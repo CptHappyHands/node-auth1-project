@@ -1,6 +1,8 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
+const usersRouter = require("./users/users-router");
+const authRouter = require("./auth/auth-router");
 
 /**
   Do what needs to be done to support sessions with the `express-session` package!
@@ -14,18 +16,44 @@ const cors = require("cors");
   The session can be persisted in memory (would not be adecuate for production)
   or you can use a session store like `connect-session-knex`.
  */
-
+const session = require("express-session");
+const store = require("connect-session-knex")(session);
 const server = express();
 
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
+server.use("/api/users", usersRouter);
+server.use("/api/auth", authRouter);
 
 server.get("/", (req, res) => {
   res.json({ api: "up" });
 });
 
-server.use((err, req, res, next) => { // eslint-disable-line
+server.use(
+  session({
+    name: "notsession", // default is connect.sid
+    secret: "nobody tosses a dwarf!",
+    cookie: {
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+      secure: false, // only set cookies over https. Server will not send back a cookie over http.
+    }, // 1 day in milliseconds
+    httpOnly: true, // don't let JS code access cookies. Browser extensions run JS code on your browser!
+    resave: false,
+    saveUninitialized: false,
+
+    store: new store({
+      knex: require("../data/db-config"),
+      tablename: "sessions",
+      sidfieldname: "sid",
+      createTable: true,
+      clearInterval: 1000 * 60 * 60,
+    }),
+  })
+);
+
+server.use((err, req, res, next) => {
+  // eslint-disable-line
   res.status(err.status || 500).json({
     message: err.message,
     stack: err.stack,

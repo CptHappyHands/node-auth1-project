@@ -6,7 +6,13 @@
     "message": "You shall not pass!"
   }
 */
-function restricted() {}
+function restricted(req, res, next) {
+  if (req.session.user) {
+    next();
+  } else {
+    next({ status: 401, message: "You shall not pass!" });
+  }
+}
 
 /*
   If the username in req.body already exists in the database
@@ -16,7 +22,9 @@ function restricted() {}
     "message": "Username taken"
   }
 */
-function checkUsernameFree() {}
+function checkUsernameFree(req, res, next) {
+  const { username } = req.body;
+}
 
 /*
   If the username in req.body does NOT exist in the database
