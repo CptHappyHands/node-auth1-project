@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const usersRouter = require("./users/users-router");
 const authRouter = require("./auth/auth-router");
+const knex = require("../data/db-config");
 
 /**
   Do what needs to be done to support sessions with the `express-session` package!
@@ -32,8 +33,8 @@ server.get("/", (req, res) => {
 
 server.use(
   session({
-    name: "notsession", // default is connect.sid
-    secret: "nobody tosses a dwarf!",
+    name: "chocolatechip", // default is connect.sid
+    secret: "nobody tosses a cookie!",
     cookie: {
       maxAge: 1 * 24 * 60 * 60 * 1000,
       secure: false, // only set cookies over https. Server will not send back a cookie over http.
@@ -43,7 +44,7 @@ server.use(
     saveUninitialized: false,
 
     store: new store({
-      knex: require("../data/db-config"),
+      knex,
       tablename: "sessions",
       sidfieldname: "sid",
       createTable: true,

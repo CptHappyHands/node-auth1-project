@@ -49,22 +49,18 @@ router.post(
   }
  */
 
-router.post("/login", checkUsernameExists, async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const [existingUser] = await User.findBy({ username });
-    if (existingUser && bcrypt.compareSync(password, existingUser.password)) {
-      req.session.user = existingUser;
-      res.json({
-        status: 200,
-        message: `Welcome ${existingUser.username}!`,
-      });
-    } else {
-      next({ status: 401, message: "Invalid credentials" });
-    }
-    res.json("login");
-  } catch (err) {
-    next(err);
+router.post("/login", checkUsernameExists, (req, res, next) => {
+  const { password } = req.body;
+
+  if (bcrypt.compareSync(password, req.user.password)) {
+    //makes the cookie set on client and the server stores a session with session ID
+    req.session.user = req.user;
+    res.json({
+      status: 200,
+      message: `Welcome ${req.user.username}!`,
+    });
+  } else {
+    next({ status: 401, message: "Invalid credentials" });
   }
 });
 
@@ -84,19 +80,17 @@ router.post("/login", checkUsernameExists, async (req, res, next) => {
   }
  */
 
-router.get("/logout", (req, res) => {
+router.get("/logout", (req, res, next) => {
   if (req.session.user) {
-    req.session.destroy((err) => {
+    res.session.destroy((err) => {
       if (err) {
-        res.json({
-          message: "no session",
-        });
+        next(err);
       } else {
-        res.json({
-          message: "logged out",
-        });
+        res.json({ message: "no session" });
       }
     });
+  } else {
+    res.json({ message: "logged out" });
   }
 });
 /**
